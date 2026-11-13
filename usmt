@@ -1,0 +1,240 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<migration urlid="http://www.microsoft.com/migration/1.0/migxmlext/customexclude">
+
+  <!-- 1. Outlook 不迁移 ost 文件，并注入跳过 O365 自动发现的注册表配置 -->
+  <component type="Documents" context="User">
+    <displayName>Perfect Outlook Migration Without Scripts</displayName>
+    <role role="Data">
+      <rules>
+        <unconditionalExclude>
+          <objectSet>
+            <!-- 已优化：补全通配符 *，确保包含子目录 -->
+            <pattern type="File">%CSIDL_LOCAL_APPDATA%\Microsoft\Outlook\* [*.ost]</pattern>
+          </objectSet>
+        </unconditionalExclude>
+      </rules>
+    </role>
+    <role role="Settings">
+      <rules>
+        <addObjects>
+          <object>
+            <location type="Registry">HKCU\Software\Policies\Microsoft\Office\16.0\Outlook\AutoDiscover [ExcludeExplicitO365Endpoint]</location>
+            <attributes>DWORD</attributes>
+            <bytes>01000000</bytes>
+          </object>
+          <object>
+            <location type="Registry">HKCU\Software\Policies\Microsoft\Office\16.0\Outlook\AutoDiscover [EnableSCPLookup]</location>
+            <attributes>DWORD</attributes>
+            <bytes>01000000</bytes>
+          </object>
+        </addObjects>
+      </rules>
+    </role>
+  </component>
+
+  <!-- 2. 迁移用户自启动项注册表 -->
+  <component type="Application" context="User">
+    <displayName>Migrate User Startup Registry Keys</displayName>
+    <role role="Settings">
+      <rules>
+        <include>
+          <objectSet>
+            <pattern type="Registry">HKCU\Software\Microsoft\Windows\CurrentVersion\Run [*]</pattern>
+            <pattern type="Registry">HKCU\Software\Microsoft\Windows\CurrentVersion\RunOnce [*]</pattern>
+          </objectSet>
+        </include>
+      </rules>
+    </role>
+  </component>
+
+  <!-- 3. 交易及行情类客户端迁移 -->
+  <component type="Documents" context="System">
+    <displayName>迁移 C:\交易及行情类客户端</displayName>
+    <role role="Data">
+      <rules>
+        <include>
+          <objectSet>
+            <pattern type="File">C:\交易及行情类客户端\* [*]</pattern>
+          </objectSet>
+        </include>
+        <!-- 已修复：将 exclude 改为 unconditionalExclude，并将错误的 object 标签修正为 objectSet，去除 [*.log] 尾部多余空格 -->
+        <unconditionalExclude>
+          <objectSet>
+            <pattern type="File">C:\交易及行情类客户端\* [*.log]</pattern>
+          </objectSet>
+        </unconditionalExclude>
+      </rules>
+    </role>
+  </component>
+
+  <!-- 4. 全盘包含（C 盘所有文件和子目录兜底） -->
+  <component type="Documents" context="System">
+    <displayName>Include all drives</displayName>
+    <role role="Data">
+      <rules>
+        <include>
+          <objectSet>
+            <pattern type="File">C:\* [*]</pattern>
+          </objectSet>
+        </include>
+      </rules>
+    </role>
+  </component>
+
+  <!-- 5. 排除 D 盘文件 -->
+  <component type="Documents" context="System">
+    <displayName>Exclude D Drive</displayName>
+    <role role="Data">
+      <rules>
+        <unconditionalExclude>
+          <objectSet>
+            <pattern type="File">D:\* [*]</pattern>
+            <pattern type="File">D:\*.*</pattern>
+          </objectSet>
+        </unconditionalExclude>
+      </rules>
+    </role>
+  </component>
+
+  <!-- 6. 排除用户目录中 AppData\Local 指定文件夹 -->
+  <!-- 已修复：将非标准的 type="AppDataLocal" 修正为标准类型 type="System" -->
+  <component type="System" context="User">
+    <displayName _locID="miguser.appdatalocal">AppData\Local</displayName>
+    <role role="Data">
+      <detects>
+        <detect>
+          <condition>MigXmlHelper.DoesObjectExist("File","%CSIDL_LOCAL_APPDATA%")</condition>
+        </detect>
+      </detects>
+      <rules>
+        <include filter='MigXmlHelper.IgnoreIrrelevantLinks()'>
+          <objectSet>
+            <pattern type="File">%CSIDL_LOCAL_APPDATA%\* [*]</pattern>
+          </objectSet>
+        </include>
+        <!-- 已修复：改为 unconditionalExclude，防止被第 4 段的 C:\* [*] 全局规则穿透绕过 -->
+        <unconditionalExclude>
+          <objectSet>
+            <pattern type="File">%CSIDL_LOCAL_APPDATA%\Microsoft\Windows\History\* [*]</pattern>
+            <pattern type="File">%CSIDL_LOCAL_APPDATA%\Temp\* [*]</pattern>
+            <pattern type="File">%CSIDL_LOCAL_APPDATA%\Citrix\* [*]</pattern>
+            <pattern type="File">%CSIDL_LOCAL_APPDATA%\VMware\* [*]</pattern>
+            <pattern type="File">%CSIDL_LOCAL_APPDATA%\Adobe\* [*]</pattern>
+            <pattern type="File">%CSIDL_LOCAL_APPDATA%\Packages\* [*]</pattern>
+            <pattern type="File">%CSIDL_LOCAL_APPDATA%\Symantec\* [*]</pattern>
+            <pattern type="File">%CSIDL_LOCAL_APPDATA%\Cyvera\* [*]</pattern>
+            <pattern type="File">%CSIDL_LOCAL_APPDATA%\anaconda3\* [*]</pattern>
+            <pattern type="File">%CSIDL_LOCAL_APPDATA%\ZOOMVDI\* [*]</pattern>
+            <pattern type="File">%CSIDL_LOCAL_APPDATA%\Mozilla\* [*]</pattern>
+            <pattern type="File">%CSIDL_LOCAL_APPDATA%\Programs\Python\* [*]</pattern>
+            <pattern type="File">%CSIDL_LOCAL_APPDATA%\CodeBuddyExtension\* [*]</pattern>
+            <pattern type="File">%CSIDL_LOCAL_APPDATA%\Package Cache\* [*]</pattern>
+            <pattern type="File">%CSIDL_LOCAL_APPDATA%\Google\Chrome\User Data\*\Cache\* [*]</pattern>
+            <pattern type="File">%CSIDL_LOCAL_APPDATA%\Microsoft\Edge\User Data\*\Cache\* [*]</pattern>
+          </objectSet>
+        </unconditionalExclude>
+        <merge script="MigXmlHelper.DestinationPriority()">
+          <objectSet>
+            <pattern type="File">%CSIDL_LOCAL_APPDATA% [desktop.ini]</pattern>
+          </objectSet>
+        </merge>
+      </rules>
+    </role>
+  </component>
+
+  <!-- 7. 排除用户目录中 AppData\Roaming 指定文件夹 -->
+  <!-- 已修复：将非标准的 type="AppDataRoaming" 修正为标准类型 type="System" -->
+  <component type="System" context="User">
+    <displayName _locID="miguser.appdataroaming">AppData\Roaming</displayName>
+    <role role="Data">
+      <detects>
+        <detect>
+          <condition>MigXmlHelper.DoesObjectExist("File","%CSIDL_APPDATA%")</condition>
+        </detect>
+      </detects>
+      <rules>
+        <include filter='MigXmlHelper.IgnoreIrrelevantLinks()'>
+          <objectSet>
+            <pattern type="File">%CSIDL_APPDATA%\* [*]</pattern>
+          </objectSet>
+        </include>
+        <!-- 已修复：改为 unconditionalExclude，防止被第 4 段的 C:\* [*] 全局规则穿透绕过 -->
+        <unconditionalExclude>
+          <objectSet>
+            <pattern type="File">%CSIDL_APPDATA%\VMware\* [*]</pattern>
+            <pattern type="File">%CSIDL_APPDATA%\Adobe\* [*]</pattern>
+            <pattern type="File">%CSIDL_APPDATA%\Temp\* [*]</pattern>
+            <pattern type="File">%CSIDL_APPDATA%\ZOOMVDI\* [*]</pattern>
+            <pattern type="File">%CSIDL_APPDATA%\Mozilla\* [*]</pattern>
+            <pattern type="File">%CSIDL_APPDATA%\.logon\* [*]</pattern>
+            <pattern type="File">%CSIDL_APPDATA%\Citrix\* [*]</pattern>
+            <pattern type="File">%CSIDL_APPDATA%\Code\* [*]</pattern>
+            <pattern type="File">%CSIDL_APPDATA%\Python\* [*]</pattern>
+            <pattern type="File">%CSIDL_APPDATA%\Tencent\* [*]</pattern>
+          </objectSet>
+        </unconditionalExclude>
+        <merge script="MigXmlHelper.DestinationPriority()">
+          <objectSet>
+            <pattern type="File">%CSIDL_APPDATA% [desktop.ini]</pattern>
+          </objectSet>
+        </merge>
+      </rules>
+    </role>
+  </component>
+
+  <!-- 8. 排除系统目录、已知金融软件安装目录及非业务账户 -->
+  <component type="Documents" context="System">
+    <displayName>Exclude system folders</displayName>
+    <role role="Data">
+      <rules>
+        <unconditionalExclude>
+          <objectSet>
+            <pattern type="File">C:\Windows\* [*]</pattern>
+            <pattern type="File">C:\Windows.old\* [*]</pattern>
+            <pattern type="File">C:\Program Files\* [*]</pattern>
+            <pattern type="File">C:\Program Files (x86)\* [*]</pattern>
+            <pattern type="File">C:\ProgramData\* [*]</pattern>
+            <pattern type="File">C:\System Volume Information\* [*]</pattern>
+            <pattern type="File">C:\Recovery\* [*]</pattern>
+            <pattern type="File">C:\EFI\* [*]</pattern>
+            <pattern type="File">C:\Boot\* [*]</pattern>
+            <pattern type="File">C:\OneDriveTemp\* [*]</pattern>
+            <pattern type="File">C:\PerfLogs\* [*]</pattern>
+            <pattern type="File">C:\inetpub\* [*]</pattern>
+            <pattern type="File">C:\Logs\* [*]</pattern>
+            <pattern type="File">C:\WIND\* [*]</pattern>
+            <pattern type="File">C:\iFind\* [*]</pattern>
+            <pattern type="File">C:\Bloomberg\* [*]</pattern>
+            <pattern type="File">C:\Comein\* [*]</pattern>
+            <pattern type="File">C:\app\* [*]</pattern>
+            <pattern type="File">C:\MCSPersonality.ini</pattern>
+            <pattern type="File">C:\COMPLETE_INSTALL_*\* [*]</pattern>
+            <pattern type="File">C:\KICKOFF_INSTALL_*\* [*]</pattern>
+            <pattern type="File">C:\PASS_INSTALL_*\* [*]</pattern>
+            <pattern type="File">C:\Tools\* [*]</pattern>
+            <pattern type="File">C:\* [*.tmp]</pattern>
+            <pattern type="File">C:\* [*.sys]</pattern>
+            <pattern type="File">C:\* [*.log]</pattern>
+            <!-- 已修复：补全 \* [*]，确保递归排除回收站内所有子目录及文件 -->
+            <pattern type="File">C:\$Recycle.Bin\* [*]</pattern>
+            <pattern type="File">C:\$WinREAgent\* [*]</pattern>
+            <pattern type="File">C:\barra\* [*]</pattern>
+            <pattern type="File">C:\* [*.ost]</pattern>
+            <pattern type="File">C:\Sumscope\* [*]</pattern>
+            <pattern type="File">C:\qubee\* [*]</pattern>
+            <pattern type="File">C:\dzh365(64)\* [*]</pattern>
+            <pattern type="File">C:\dzh3\* [*]</pattern>
+            <pattern type="File">D:\* [*]</pattern>
+            <pattern type="File">C:\Users\Helpdesk2001\* [*]</pattern>
+            <pattern type="File">C:\Users\Helpdesk2003\* [*]</pattern>
+            <pattern type="File">C:\Users\Helpdesk2005\* [*]</pattern>
+            <pattern type="File">C:\Users\Administrator\* [*]</pattern>
+            <pattern type="File">C:\Users\fund\* [*]</pattern>
+            <pattern type="File">C:\Users\Default*\* [*]</pattern>
+            <pattern type="File">C:\Users\Public\* [*]</pattern>
+          </objectSet>
+        </unconditionalExclude>
+      </rules>
+    </role>
+  </component>
+</migration>
