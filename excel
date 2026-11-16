@@ -1,0 +1,40 @@
+# 1. 配置文件路径与列名
+$TableAPath = "C:\Data\表A.xlsx"
+$TableBPath = "C:\Data\表B.xlsx"
+$OutputDir  = "C:\Data\Output"
+
+$ColA = "设备名称"
+$ColB = "ltsc计算机名"
+
+if (-not (Test-Path $OutputDir)) { New-Item -Path $OutputDir -ItemType Directory -Force | Out-Null }
+
+# 2. 读取数据并构建表B计算机名集合
+$DataA = Import-Excel -Path $TableAPath
+$DataB = Import-Excel -Path $TableBPath
+
+$TargetNames = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+foreach ($row in $DataB) {
+    $name = [string]$row.$ColB
+    if (-not [string]::IsNullOrWhiteSpace($name)) {
+        [void]$TargetNames.Add($name.Trim())
+    }
+}
+
+# 3. 筛选表A匹配项并按“设备名称”分组，每台计算机单独导出一个以计算机名命名的文件
+$MatchedGroups = $DataA | Where-Object {
+    $devName = [string]$_.$ColA
+    (-not [string]::IsNullOrWhiteSpace($devName)) -and $TargetNames.Contains($devName.Trim())
+} | Group-Object -Property { ([string]$_.$ColA).Trim() }
+
+if ($MatchedGroups) {
+    foreach ($group in $MatchedGroups) {
+        # 以获取到的计算机名作为文件名
+        $ComputerName = $group.Name
+        $OutputPath   = Join-Path -Path $OutputDir -ChildPath "$ComputerName.xlsx"
+        
+        $group.Group | Export-Excel -Path $OutputPath -AutoSize -FreezeTopRow -BoldTopRow
+        Write-Host "已生成: $OutputPath （共 $($group.Count) 条记录）" -ForegroundColor Cyan
+    }
+} else {
+    Write-Warning "未匹配到任何数据。"
+}
